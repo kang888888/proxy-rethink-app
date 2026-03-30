@@ -1,0 +1,230 @@
+# mobsfscan 中文安全报告
+
+- 原始日志: `mobsfscan.log`
+- 规则块数: 19
+- 严重级别统计: {'WARNING': 6, 'INFO': 7, 'ERROR': 6}
+
+## ERROR（6 条）
+
+### android_kotlin_hiddenui
+- 严重性: ERROR
+- 中文解读: 存在隐藏 UI 元素的风险。隐藏内容可能被用于欺骗用户或造成信息泄露，需核查 UI 逻辑与显示/遮挡策略。
+- 原始描述: Hidden elements in view can be used to hide data from user. But this data can be leaked.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#checking-for-sensitive-data-disclosure-through-the-user-interface-mstg-storage-7
+- 命中文件（最多显示前 10 个）:
+  - app/src/full/java/com/kang/bravedns/adapter/AppWiseDomainsAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/AppWiseIpsAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/ConnectionTrackerAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/CustomDomainAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/CustomIpAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/DnsLogAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/DomainConnectionsAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/EventsAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/FirewallAppListAdapter.kt
+  - app/src/full/java/com/kang/bravedns/adapter/FirewallStatusSpinnerAdapter.kt
+  - ...（共 76 个）
+- 命中 Match String（最多显示前 5 个）: View.GONE, View.INVISIBLE
+
+### android_task_hijacking1
+- 严重性: ERROR
+- 中文解读: 发现 Task Hijacking/StrandHogg 相关风险点（launchMode/taskAffinity 配置不安全）。建议按描述调整 launchMode（如 singleInstance）或设置空 taskAffinity。
+- 原始描述: The Activity should not be having the launch mode attribute set to "singleTask". It is then possible for other applications to place a malicious activity on top of the activity stack resulting in Task Hijacking/StrandHogg 1.0 vulnerability. This makes the application an easy target for phishing attacks. The vulnerability can be remediated by setting the launch mode attribute to "singleInstance" or by setting an empty taskAffinity (taskAffinity="") attribute. You can also update the target SDK version (26) of the app to 28 or higher to fix this issue at platform level.
+- 参考: https://github.com/OWASP/owasp-mastg/blob/master/Document/0x05a-Platform-Overview.md
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/src/full/AndroidManifest.xml
+- 命中 Match String（最多显示前 5 个）: launchMode=singleTask and targetSdk<28
+
+### android_task_hijacking2
+- 严重性: ERROR
+- 中文解读: 发现 StrandHogg 2.0 task hijacking 风险点。建议按描述调整 launchMode 与 taskAffinity，必要时提升 targetSdk。
+- 原始描述: Activity is found to be vulnerable to StrandHogg 2.0 task hijacking vulnerability. When vulnerable, it is possible for other applications to place a malicious activity on top of the activity stack of the vulnerable application. This makes the application an easy target for phishing attacks. The vulnerability can be remediated by setting the launch mode attribute to "singleInstance" and by setting an empty taskAffinity (taskAffinity=""). You can also update the target SDK version (26) of the app to 29 or higher to fix this issue at platform level.
+- 参考: https://github.com/OWASP/owasp-mastg/blob/master/Document/0x05a-Platform-Overview.md
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/src/full/AndroidManifest.xml
+- 命中 Match String（最多显示前 5 个）: Activity exported, targetSdk<29 and launchMode != singleInstance or taskAffinity is not empty
+
+### android_manifest_base_config_cleartext
+- 严重性: ERROR
+- 中文解读: 配置允许明文 HTTP（cleartext）。生产环境建议禁用 cleartext，改为仅使用 HTTPS，并检查 Network Security Config。
+- 原始描述: App allows clear text HTTP communication. Disable this for production endpoints.
+- 参考: https://github.com/OWASP/owasp-mastg/blob/master/Document/0x05g-Testing-Network-Communication.md#testing-for-cleartext-traffic
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/build/intermediates/packaged_res/fdroidFullDebug/packageFdroidFullDebugResources/xml/network_security_config.xml
+  - /mnt/e/rethink-app/app/build/intermediates/packaged_res/playFullDebug/packagePlayFullDebugResources/xml/network_security_config.xml
+  - /mnt/e/rethink-app/app/build/intermediates/packaged_res/websiteFullDebug/packageWebsiteFullDebugResources/xml/network_security_config.xml
+  - /mnt/e/rethink-app/app/src/main/res/xml/network_security_config.xml
+- 命中 Match String（最多显示前 5 个）: base_config: cleartextTrafficPermitted=true
+
+### android_manifest_insecure_minsdk_error
+- 严重性: ERROR
+- 中文解读: 最小支持版本过低（日志显示可安装到更旧系统）。这些系统可能缺少足够的安全更新。建议抬高 minSdk 或为旧版本提供额外安全兜底。
+- 原始描述: App supports Android version 6.0-6.0.1, API Level: 23. This application can be installed on an older version of android that has multiple unfixed vulnerabilities. These devices won't receive reasonable security updates from Google. Support an Android version >= 10, API 29 to receive reasonable security updates.
+- 参考: https://github.com/OWASP/owasp-mastg/blob/master/Document/0x05a-Platform-Overview.md
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/fdroidFullDebug/processFdroidFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/playFullDebug/processPlayFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/websiteFullDebug/processWebsiteFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/fdroidFullDebug/processFdroidFullDebugManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/arm64-v8a/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/armeabi-v7a/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/armeabi/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/universal/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/x86/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/x86_64/AndroidManifest.xml
+  - ...（共 20 个）
+- 命中 Match String（最多显示前 5 个）: android:minSdkVersion<29
+
+### android_manifest_debugging_enabled
+- 严重性: ERROR
+- 中文解读: 应用处于可调试状态（debuggable=true）。会显著增加逆向/注入攻击难度，发布版应关闭。
+- 原始描述: Debugging was enabled on the app which makes it easier for reverse engineers to hook a debugger to it. This allows dumping a stack trace and accessing debugging helper classes.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05i-Testing-Code-Quality-and-Build-Settings.md#testing-whether-the-app-is-debuggable-mstg-code-2
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/fdroidFullDebug/processFdroidFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/playFullDebug/processPlayFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/websiteFullDebug/processWebsiteFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/fdroidFullDebug/processFdroidFullDebugManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/arm64-v8a/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/armeabi-v7a/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/armeabi/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/universal/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/x86/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/x86_64/AndroidManifest.xml
+  - ...（共 20 个）
+- 命中 Match String（最多显示前 5 个）: android:debuggable=true
+
+## WARNING（6 条）
+
+### hardcoded_api_key
+- 严重性: WARNING
+- 中文解读: 检测到硬编码的 API Key/密钥。建议避免将密钥直接写入代码或资源，改为使用环境变量/服务端下发/安全存储，并确保不出现在提交内容中。
+- 原始描述: A hardcoded Key is identified.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#storing-a-key---example
+- 命中文件（最多显示前 10 个）:
+  - app/src/play/java/com/kang/bravedns/iab/Security.java
+- 命中 Match String（最多显示前 5 个）: static final private String KEY_FACTORY_ALGORITHM = "RSA";
+
+### sha1_hash
+- 严重性: WARNING
+- 中文解读: 检测到使用 SHA1 哈希算法。SHA1 存在碰撞风险，建议改用 SHA-256/更强算法，并检查相关验证逻辑。
+- 原始描述: SHA1 Hash algorithm used. The SHA1 hash is known to have hash collisions.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04g-Testing-Cryptography.md#identifying-insecure-andor-deprecated-cryptographic-algorithms-mstg-crypto-4
+- 命中文件（最多显示前 10 个）:
+  - app/src/play/java/com/kang/bravedns/iab/Security.java
+- 命中 Match String（最多显示前 5 个）: Signature signatureAlgorithm = Signature.getInstance(SIGNATURE_ALGORITHM);
+
+### android_kotlin_hardcoded
+- 严重性: WARNING
+- 中文解读: Kotlin 代码疑似存在硬编码敏感信息/密钥。建议移除硬编码内容，改用安全配置来源，并审查同类代码与构建产物。
+- 原始描述: Files may contain hardcoded sensitive information like usernames, passwords, keys etc.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#storing-a-key---example
+- 命中文件（最多显示前 10 个）:
+  - app/src/full/java/com/kang/bravedns/service/TcpProxyHelper.kt
+  - app/src/main/java/com/kang/bravedns/net/manager/ConnectionTracer.kt
+  - app/src/main/java/com/kang/bravedns/service/PersistentState.kt
+  - app/src/main/java/com/kang/bravedns/wireguard/Peer.kt
+  - app/src/main/java/com/kang/bravedns/wireguard/WgInterface.kt
+- 命中 Match String（最多显示前 5 个）: key = "pubkey", key = "17|10.111.222.1|10.111.222.3|53", pass = "allow_bypass", key = ").append(psk.base64()).append('\n', key = ").append(publickey.base64()).append('\n'
+  - ...（共 9 个）
+
+### android_kotlin_sql_raw_query
+- 严重性: WARNING
+- 中文解读: 使用 raw SQL 查询。若拼接不可信输入，可能导致 SQL 注入或数据越权，建议使用参数化查询并进行输入校验。
+- 原始描述: App uses SQLite Database and execute raw SQL query. Untrusted user input in raw SQL queries can cause SQL Injection. Also sensitive information should be encrypted and written to the database.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x04h-Testing-Code-Quality.md#injection-flaws-mstg-arch-2-and-mstg-platform-2
+- 命中文件（最多显示前 10 个）:
+  - app/src/main/java/com/kang/bravedns/database/LogDatabase.kt
+- 命中 Match String（最多显示前 5 个）: android.database.sqlite, execSQL(
+
+### android_manifest_missing_explicit_allow_backup
+- 严重性: WARNING
+- 中文解读: 未显式禁用 `android:allowBackup`。默认值可能允许通过 `adb` 备份应用数据，生产环境建议显式设置为 `false`。
+- 原始描述: The flag [android:allowBackup] should be set to false. By default it is set to true and allows anyone to backup your application data via adb. It allows users who have enabled USB debugging to copy application data off of the device.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#static-analysis-7
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/build/intermediates/packaged_manifests/fdroidFullDebugUnitTest/processFdroidFullDebugUnitTestManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/src/full/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/src/headless/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/src/play/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/src/website/AndroidManifest.xml
+- 命中 Match String（最多显示前 5 个）: android:allowBackup not set
+
+### android_manifest_allow_backup
+- 严重性: WARNING
+- 中文解读: `android:allowBackup` 未被禁用，可能允许通过 `adb` 备份应用数据。建议在发布配置中将其设为 `false`。
+- 原始描述: This flag allows anyone to backup your application data via adb. It allows users who have enabled USB debugging to copy application data off of the device.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#static-analysis-7
+- 命中文件（最多显示前 10 个）:
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/fdroidFullDebug/processFdroidFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/playFullDebug/processPlayFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifest/websiteFullDebug/processWebsiteFullDebugMainManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/fdroidFullDebug/processFdroidFullDebugManifest/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/arm64-v8a/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/armeabi-v7a/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/armeabi/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/universal/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/x86/AndroidManifest.xml
+  - /mnt/e/rethink-app/app/build/intermediates/merged_manifests/playFullDebug/processPlayFullDebugManifest/x86_64/AndroidManifest.xml
+  - ...（共 20 个）
+- 命中 Match String（最多显示前 5 个）: android:allowBackup=true
+
+## INFO（7 条）
+
+### android_logging
+- 严重性: INFO
+- 中文解读: 应用会输出日志。需要确保日志中不包含敏感信息（密钥、账号、隐私数据等），尤其是生产环境与调试日志开关。
+- 原始描述: The App logs information. Please ensure that sensitive information is never logged.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#logs
+- 命中文件（最多显示前 10 个）:
+  - app/src/play/java/com/kang/bravedns/iab/Security.java
+- 命中 Match String（最多显示前 5 个）: Log.e(TAG, "Error generating PublicKey from encoded key: " + e.getMessage());, String msg = "Invalid key specification: " + e;
+
+### android_kotlin_logging
+- 严重性: INFO
+- 中文解读: Kotlin 代码中存在日志相关风险点。建议避免记录敏感数据，必要时对日志做脱敏/关闭调试输出。
+- 原始描述: The App logs information. Sensitive information should never be logged.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#logs
+- 命中文件（最多显示前 10 个）:
+  - app/build/generated/ksp/fdroidFullDebug/kotlin/com/kang/bravedns/database/ConsoleLogDAO_Impl.kt
+  - app/build/generated/ksp/fdroidFullDebug/kotlin/com/kang/bravedns/database/ConsoleLogDatabase_Impl.kt
+  - app/build/generated/ksp/fdroidFullDebug/kotlin/com/kang/bravedns/database/DnsLogDAO_Impl.kt
+  - app/build/generated/ksp/fdroidFullDebug/kotlin/com/kang/bravedns/database/LogDatabase_Impl.kt
+  - app/build/generated/ksp/fdroidFullDebug/kotlin/com/kang/bravedns/database/RethinkLogDao_Impl.kt
+  - app/build/generated/ksp/playFullDebug/kotlin/com/kang/bravedns/database/ConsoleLogDAO_Impl.kt
+  - app/build/generated/ksp/playFullDebug/kotlin/com/kang/bravedns/database/ConsoleLogDatabase_Impl.kt
+  - app/build/generated/ksp/playFullDebug/kotlin/com/kang/bravedns/database/DnsLogDAO_Impl.kt
+  - app/build/generated/ksp/playFullDebug/kotlin/com/kang/bravedns/database/LogDatabase_Impl.kt
+  - app/build/generated/ksp/playFullDebug/kotlin/com/kang/bravedns/database/RethinkLogDao_Impl.kt
+  - ...（共 55 个）
+- 命中 Match String（最多显示前 5 个）: Log.i, Log.e, Log.d, Log.w, Log.v
+  - ...（共 8 个）
+
+### android_root_detection
+- 严重性: INFO
+- 中文解读: 未发现 root 检测能力。若应用依赖设备完整性（安全关键功能），可考虑加入合规的完整性校验，但要注意兼容性与误判。
+- 原始描述: This app does not have root detection capabilities. Running a sensitive application on a rooted device questions the device integrity and affects users data.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05j-Testing-Resiliency-Against-Reverse-Engineering.md#testing-root-detection-mstg-resilience-1
+
+### android_tapjacking
+- 严重性: INFO
+- 中文解读: 未发现防 Tapjacking 能力（如对 overlay/点击劫持的防护）。建议实现并启用防护策略，避免恶意覆盖诱导点击。
+- 原始描述: This app does not have capabilities to prevent tapjacking attacks.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05h-Testing-Platform-Interaction.md#testing-for-overlay-attacks-mstg-platform-9
+
+### android_certificate_transparency
+- 严重性: INFO
+- 中文解读: 未强制 TLS 证书透明度（CT）。这会影响检测错误签发或恶意获取的证书。
+- 原始描述: This app does not enforce TLS Certificate Transparency which helps to  detect SSL certificates that have been mistakenly issued by a  certificate authority or maliciously acquired from an otherwise  unimpeachable certificate authority.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05g-Testing-Network-Communication.md#testing-custom-certificate-stores-and-certificate-pinning-mstg-network-4
+
+### android_safetynet
+- 严重性: INFO
+- 中文解读: 未使用 SafetyNet Attestation（或类似完整性校验）。这会降低服务端验证设备真实性的能力。
+- 原始描述: This app does not uses SafetyNet Attestation API that provides cryptographically-signed attestation, assessing the device's integrity. This check helps to ensure that the servers are interacting with the genuine app running on a genuine Android device.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05j-Testing-Resiliency-Against-Reverse-Engineering.md#testing-root-detection-mstg-resilience-1
+
+### android_prevent_screenshot
+- 严重性: INFO
+- 中文解读: 未具备防截图能力（如从最近任务/Now on Tap 截屏等）。对敏感界面建议启用 FLAG_SECURE 等策略。
+- 原始描述: This app does not have capabilities to prevent against Screenshots from Recent Task History/ Now On Tap etc.
+- 参考: https://github.com/MobSF/owasp-mstg/blob/master/Document/0x05d-Testing-Data-Storage.md#finding-sensitive-information-in-auto-generated-screenshots-mstg-storage-9

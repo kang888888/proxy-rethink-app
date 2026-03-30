@@ -60,7 +60,7 @@ jobs:
 
       - name: 🏗️ Build & notify
         run: |
-          ./gradlew ${ALPHA_BUILD_VARIANT} --info --warning-mode all
+          ./gradlew -PallReleaseChannels=true ${ALPHA_BUILD_VARIANT} --info --warning-mode all
         env:
           ALPHA_KS_ALIAS: ${{ vars.ALPHA_KS_ALIAS }}
           ALPHA_KS_FILE: ${{ vars.ALPHA_KS_FILE }}

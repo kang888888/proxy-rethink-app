@@ -1,0 +1,109 @@
+---
+description: 修改 Kotlin/Java/Android 资源后必须执行的编译与检查流程，降低「打包成功但进入页面闪退」风险
+alwaysApply: true
+---
+
+# Android 代码修改后的编译检查规范
+
+编写或修改 **Activity / Fragment / 布局 / Material 控件** 时，建议同时遵循 [.cursor/rules/android-ui-and-ui-tests.mdc](android-ui-and-ui-tests.mdc)（主题、资源、Robolectric 约定与冒烟测试触发条件）。
+
+## 目标
+
+仅 `compile` / `assembleDebug` 通过**不能**保证运行时安全。以下问题常导致「能安装、一点页面就崩」：
+
+- **R8 / ProGuard**：仅 `release`/`alpha` 开启混淆与裁剪，缺 `-keep`、反射、JNI 名称等会在 **Debug 正常、Release 崩溃**。
+- **Product flavor 分裂**：`app/src/full`、`app/src/fdroid`、`app/src/play` 等源码集不同；只编一个 variant 可能漏掉另一套里的引用错误。工程默认在 `gradle.properties` 中 **`allReleaseChannels=false`**，Gradle 只注册 **websiteFull*** 变体；编 **play** / **fdroid** 或需要与 CI 一致的全渠道 `lint` 时须 **`-PallReleaseChannels=true`** 或将该属性设为 `true`（见 `app/build.gradle` 中 `variantFilter`）。
+- **资源与 Manifest**：缺失 drawable/string、错误 `activity` 声明，编译期有时不报错，运行期 `InflateException` / `ClassNotFoundException`。
+- **主题与 Material 控件**：Application 使用「瘦身」主题（如仅含 `AppThemeInitial`）时，若某 `Activity` 未在 `super.onCreate()` 前叠加完整主题（如 `theme.applyStyle(getCurrentTheme(...), true)`），`MaterialButton`、`SwitchMaterial` 等可能在 **inflate 时** 因无法解析 `?attr/...` 而崩溃；**Lint 与 `assembleDebug` 通常不会报**，需靠下面「运行期 UI 检测」手段提前发现。
+- **Lint 已配置 `abortOnError true`**，但必须实际执行 `lint` 任务才会拦截。
+
+## 修改范围与 Agent 义务
+
+凡改动 `app/` 下 **`.kt` / `.java` / `AndroidManifest.xml` / `res/` / `proguard-rules.pro`**，在结束任务前应**在本机执行**（或明确说明因环境无法执行并列出应跑命令）下列检查；不得仅凭「无编译错误」收尾。
+
+- **必须实际跑通命令并汇报结果**（成功 / 失败及首条报错），不得只「列出应跑命令」而不执行。
+- 根目录 **`gradle.properties`** 若含 `org.gradle.java.home` 等 Windows 路径，须满足 Lint **PropertyEscape**（例如 `org.gradle.java.home=D\:\\ext-env\\Java\\jdk-17`），否则 `lint` 会在扫描该文件时直接失败。
+- 若全量 `lint` 因历史基线问题无法一次清零，应在任务说明中写明，并优先修复**本次改动引入**的 Lint error；必要时再考虑 `lint-baseline.xml`（与团队约定一致）。
+- 若改动符合上文「运行期 UI 检测」中的触发条件（新 Activity、Material 控件、瘦身主题等），应**新增或更新** Robolectric/仪器化冒烟用例，并实际执行对应 `test*` / `connected*AndroidTest`；无法执行时说明原因及应由谁补测。
+
+## 必跑（与 CI 对齐，默认 Website + Full）
+
+在项目根目录（Windows 使用 `gradlew.bat`）。
+
+**本地默认（仅 website 变体已注册）**——与 `allReleaseChannels=false` 一致，日常改代码可只跑：
+
+```powershell
+.\gradlew.bat lint
+.\gradlew.bat assembleWebsiteFullDebug --warning-mode all
+```
+
+**与 CI 完全一致**（全渠道变体均存在、含 `fdroid`/`play` 的 lint）：CI 在 [.github/workflows/android.yml](.github/workflows/android.yml) 中对 `lint` 与 `assemble` 传入 **`-PallReleaseChannels=true`**，本地可对齐为：
+
+```powershell
+.\gradlew.bat -PallReleaseChannels=true lint
+.\gradlew.bat -PallReleaseChannels=true assembleWebsiteFullDebug --warning-mode all
+```
+
+说明：`assemble*` 任务名需包含 **`full`**，以便应用 Firebase/Google Services 相关配置（见 `app/build.gradle` 中 `apkBuild` 逻辑）。若缺少 `google-services.json`，可改用 **`assembleFdroidFullDebug`**（须加 **`-PallReleaseChannels=true`**，否则默认配置下无该任务）。
+
+## 若改动涉及 F-Droid 或无 Google 依赖路径
+
+同时或单独验证（默认 `allReleaseChannels=false` 时 **必须** 打开全渠道，否则不存在 `assembleFdroid*` 任务）：
+
+```powershell
+.\gradlew.bat -PallReleaseChannels=true assembleFdroidFullDebug --warning-mode all
+```
+
+## 强烈建议：Release 变体（抓 R8 / 资源收缩）
+
+在发版或改动混淆规则、反射、序列化、原生库接口后执行：
+
+```powershell
+.\gradlew.bat assembleWebsiteFullRelease --warning-mode all
+```
+
+（若目标渠道为 Play，可改用 `assemblePlayFullRelease`，同样须 **`-PallReleaseChannels=true`**。）
+
+## 运行期 UI 检测（补齐 Lint / 编译盲区）
+
+以下用于发现 **仅打包安装后才会暴露** 的问题（典型：`InflateException`、`Failed to resolve attribute`、主题与 Material 不一致）。**不能**用「只跑 lint + assemble」替代。
+
+| 手段 | 适用场景 | 说明 |
+|------|----------|------|
+| **Robolectric：`ActivityScenario` 启动目标 Activity** | 新增/改动独立 `Activity`、其布局含 `Material*` 控件或依赖完整主题 | 在 JVM 上执行真实 `setContentView`/inflate，主题错误会 **测试失败**；成本低，可进 CI。 |
+| **Android 仪器化测试（`androidTest`）** | 需系统 WebView、真实资源管线或与 Robolectric 行为不一致时 | 在模拟器/真机跑，较慢，覆盖面可与 Robolectric 二选一或互补。 |
+| **自定义 Lint 规则** | 团队约定（如「凡 `AppCompatActivity` 且布局含 `MaterialButton` 必须调用 `applyStyle`」） | 维护成本高，适合稳定模式化后的长期约束。 |
+
+**新增或修改下列内容时，应在同 PR 内补充或更新对应冒烟测试（至少能 `launch` Activity 并完成 `onCreate` 不抛异常）：**
+
+- 新 `Activity` / 主流程 Fragment 宿主；
+- `AndroidManifest` 中 `android:theme` 仍为 `AppThemeInitial` 或未继承完整 `AppTheme` 的页面；
+- 布局引入 `com.google.android.material` 控件、或大量 `?attr/` 主题引用。
+
+**Robolectric 任务示例（与当前变体一致即可）：**
+
+```powershell
+.\gradlew.bat testWebsiteFullDebugUnitTest
+```
+
+全量（需全渠道任务存在时）：`.\gradlew.bat -PallReleaseChannels=true :app:test`
+
+仪器化示例（按需连接模拟器/真机；任务名与 `assemble*` 的 variant 一致，可用 `.\gradlew.bat tasks --group=verification` 查看 `connected*`）：
+
+```powershell
+.\gradlew.bat connectedWebsiteFullDebugAndroidTest
+```
+
+日常除 Activity 冒烟外，仍须跑与当前 flavor 对应的**全部**单元测试（业务逻辑、ViewModel 等），命令与上表相同；全量：`.\gradlew.bat -PallReleaseChannels=true :app:test`。
+
+## 真机/模拟器冒烟（仍无法被 Gradle 完全替代）
+
+在设备可用时：安装对应 APK 后启动主界面，并查看 Logcat 中 **`FATAL`** / **`AndroidRuntime`**。混淆相关崩溃栈常为 `a.b.c`，若仅 Debug 通过而 Release 崩，优先对照上一节 Release 构建与 `proguard-rules.pro`。
+
+## 变更小结写法
+
+在 PR/提交说明中可简要写：
+
+- 已跑 `lint`（是否带 `-PallReleaseChannels=true`）、`assembleWebsiteFullDebug`[ + `assembleWebsiteFullRelease` / `assembleFdroidFullDebug` ]；
+- 已跑 `testWebsiteFullDebugUnitTest`（或等价变体），若本次涉及新页面 / Material 主题风险，注明是否**新增或更新 Activity 冒烟用例**（Robolectric 或 `connected*AndroidTest`）；
+- 若验证了非 website 渠道，注明已开启 `allReleaseChannels`。

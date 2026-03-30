@@ -777,6 +777,9 @@
 
     <string name="dc_block_heading" translatable="true">rules</string>
     <string name="dc_other_dns_heading" translatable="true">type</string>
+    <string name="dc_local_dns_heading" translatable="true">Local DNS</string>
+    <string name="dc_local_dns_desc" translatable="true">Hosts and profiles here override results for matching domains. All other domains use the DNS type below.</string>
+    <string name="dc_local_dns_manage" translatable="true">Manage hosts &amp; profiles</string>
 
     <string name="dc_custom_dns_radio" translatable="true">Other DNS</string>
     <string name="dc_rethink_dns_radio" translatable="true">Rethink DNS</string>
@@ -1765,8 +1768,8 @@
         Example: key:"sender" value:"com.termux"\n\n
 
         Supported actions:\n
-        • Start VPN – com.celzero.bravedns.intent.action.VPN_START\n
-        • Stop VPN – com.celzero.bravedns.intent.action.VPN_STOP
+        • Start VPN – com.kang.bravedns.intent.action.VPN_START\n
+        • Stop VPN – com.kang.bravedns.intent.action.VPN_STOP
     </string>
     <string name="adv_tasker_dialog_edit_hint" translatable="true">Enter package name (example: net.dinglisch.android.taskerm)</string>
 
@@ -1994,4 +1997,43 @@
     <string name="custom_lan_ip_save_error" translatable="false">Could not save custom LAN IPs</string>
     <string name="custom_lan_ip_open_error" translatable="false">Could not open Custom LAN IPs dialog</string>
     <string name="custom_lan_ip_validation_error" translatable="false">Invalid IP addresses. Ensure:\n• IPv4 must be private (10.x.x.x, 172.16-31.x.x, or 192.168.x.x)\n• IPv6 must be unique local (fc00::/7)\n• Both IP and prefix must be provided together</string>
+    <string name="local_hosts" translatable="false">Local DNS</string>
+    <string name="local_hosts_profiles_manage" translatable="false">Manage Local DNS Profiles</string>
+    <string name="local_hosts_profiles_hint" translatable="false">Tap profile to toggle ON/OFF. Long press for more actions.</string>
+    <string name="local_hosts_add_profile" translatable="false">Add Profile</string>
+    <string name="local_hosts_add_rule" translatable="false">Add Rule</string>
+    <string name="local_hosts_import_file" translatable="false">Import File</string>
+    <string name="local_hosts_sync_remote" translatable="false">Sync Remote</string>
+    <string name="local_hosts_enable_only_profile" translatable="false">Enable only this profile</string>
+    <string name="local_hosts_rename_profile" translatable="false">Rename profile</string>
+    <string name="local_hosts_delete_profile" translatable="false">Delete profile</string>
+    <string name="local_hosts_select_profile_first" translatable="false">Select a profile first</string>
+    <string name="local_hosts_conflict_title" translatable="false">Hosts Conflict Detected</string>
+    <string name="local_hosts_conflict_message" translatable="false">Found %1$s conflicting rule(s) with active profiles:\n\n%2$s\n\nContinue enabling this profile?</string>
+    <string name="local_hosts_conflict_count" translatable="false">%1$s conflicts</string>
+    <string name="local_hosts_profile_meta" translatable="false">priority=%1$s · rules=%2$s</string>
+    <string name="local_hosts_summary" translatable="false">Enabled profiles: %1$s · Rules: %2$s · Conflicts: %3$s</string>
+    <string name="local_hosts_rule_saved" translatable="false">Rule saved</string>
+    <string name="local_hosts_import_result" translatable="false">Imported %1$s host rules</string>
+    <string name="local_hosts_import_result_detailed" translatable="false">Imported %1$s, Skipped %2$s, Conflicts %3$s</string>
+    <string name="local_hosts_rules" translatable="false">Host Rules</string>
+    <string name="local_hosts_search_rule_hint" translatable="false">Search domain / IP / type</string>
+    <string name="local_hosts_rule_meta" translatable="false">%1$s · %2$s · %3$s</string>
+    <string name="local_hosts_rules_summary" translatable="false">Showing %1$s / %2$s rules</string>
+    <string name="local_hosts_delete_rule" translatable="false">Delete rule</string>
+    <string name="local_hosts_delete_rule_confirm" translatable="false">Delete this rule?\n\n%1$s -> %2$s</string>
+    <string name="local_hosts_delete_profile_confirm" translatable="false">Delete profile \"%1$s\" and all its rules?</string>
+    <string name="local_hosts_label_profile_name" translatable="false">Profile name</string>
+    <string name="local_hosts_label_hosts_content" translatable="false">Hosts content</string>
+    <string name="local_hosts_add_profile_name_hint" translatable="false">e.g. Work hosts</string>
+    <string name="local_hosts_add_profile_content_hint" translatable="false">Paste hosts content (optional)</string>
+    <string name="local_hosts_edit_profile" translatable="false">Edit Profile</string>
+    <string name="local_hosts_rule_domain" translatable="false">Domain</string>
+    <string name="local_hosts_rule_ip" translatable="false">IP Address</string>
+    <string name="local_hosts_remote_url" translatable="false">Remote URL</string>
+    <string name="local_hosts_error_name_required" translatable="false">Profile name is required</string>
+    <string name="local_hosts_error_domain_required" translatable="false">Domain is required</string>
+    <string name="local_hosts_error_ip_required" translatable="false">IP address is required</string>
+    <string name="local_hosts_error_url_required" translatable="false">Remote URL is required</string>
+    <string name="local_hosts_open_dialog_error" translatable="false">Could not open Local DNS editor dialog</string>
 </resources>

@@ -1,0 +1,62 @@
+---
+description: Android UI（Activity/Fragment/布局/Material）编码约定与 Robolectric 冒烟测试规范，减少主题/资源/包名类运行期错误
+globs:
+  - app/**/ui/**/*.kt
+  - app/**/adapter/**/*.kt
+  - app/src/**/res/**/*.xml
+  - app/src/test/**/*.kt
+alwaysApply: false
+---
+
+# Android UI 与 UI 测试规范
+
+本规则与 [android-post-edit-build-verification.mdc](android-post-edit-build-verification.mdc) 配合使用：前者管 **lint/assemble/运行期 UI 检测** 的执行义务；本文件管 **怎么写 UI 代码** 和 **怎么写能提前发现问题** 的测试。
+
+## 适用范围
+
+- 新建或修改：`Activity`、`Fragment`、与界面强相关的 `Adapter`、布局 XML、主题/样式。
+- 新增或修改：Robolectric / `androidTest` 中与界面相关的冒烟用例。
+
+## 主题与 AppCompat / Material（高频崩溃源）
+
+1. **Manifest 中 Application 使用「瘦身」主题**（如仅 `AppThemeInitial`、少量 item）时，**凡使用 `AppCompatActivity` 且布局含 `com.google.android.material.*` 或大量 `?attr/` 的页面**，必须在 `super.onCreate()` **之前**与主界面保持一致地叠加完整主题，例如：
+   - `theme.applyStyle(Themes.getCurrentTheme(isDarkThemeOn(), persistentState.theme), true)`
+   - 参考：`HomeScreenActivity`；本地 hosts 相关：`LocalHostsProfilesActivity`、`LocalHostsProfileDetailActivity`。
+2. **不要**假设「能编译」就等于「inflate 不崩」：`Failed to resolve attribute`、`InflateException` 往往只在运行期出现。
+3. 新增 **独立 Activity** 时，在 Manifest 中继承应用主题即可；若仍仅用 `AppThemeInitial`，须按上条在代码中 `applyStyle`，否则 Material 控件易在解析 `textAppearance` / `colorPrimary` 等时失败。
+
+## 布局与资源
+
+1. 优先复用工程已有 **AppTheme / AppThemeInitial** 体系下的 `textAppearance`、`color`；避免在未统一主题的页面引用 **仅在完整 `AppTheme` 中声明** 的自定义 `attr`。
+2. 列表项、对话框若引入 **Material 控件**，须与宿主 **同一主题上下文**（Activity 已 `applyStyle` 或由 `AppTheme` 覆盖）。
+3. 修改 `res/layout` 后，除 lint/assemble 外，对关键路径至少做一次 **Robolectric 启动 Activity** 或真机点按（见下节）。
+
+## Koin 与界面层
+
+1. Activity/Fragment 使用 `by inject()` 时，**Robolectric** 中须单独 `startKoin { androidContext(context); modules(...) }` 或使用 **不启动生产 `Application`** 的测试 `Application`（见本仓库 `LocalHostsRobolectricTestApplication`），避免与 `RethinkDnsApplication` 内已 `startKoin` 冲突。
+2. 测试模块只需提供 **当前页面真实会解析** 的依赖；改构造签名后同步更新对应 Test。
+
+## Robolectric（本仓库已落地约定）
+
+以下与 **`testFdroidFullDebugUnitTest` / `testWebsiteFullDebugUnitTest`** 能否稳定通过直接相关：
+
+1. **`app/build.gradle`**：`testOptions { unitTests { includeAndroidResources = true } }`，保证单元测试合并资源，避免 `R` / drawable 解析异常。
+2. **`app/src/test/resources/robolectric.properties`**：设置 `package=<与 applicationId 一致>`，避免 Robolectric 落到 `org.robolectric.default`，引发「非 AppCompat 主题」或 `No package ID 7f`。
+3. **`@Config(sdk = [...], application = <测试 Application>::class)`**：测试 `Application` 中可对 `setTheme(R.style.AppTheme)`，避免纯系统 `Application` 无 Material 主题。
+4. 启动 Activity 优先使用 **`Robolectric.buildActivity(...).create().start().resume()`**（或项目统一封装）；若使用 `ActivityScenario`，须保证 manifest 中可解析组件且 **package 与 applicationId 一致**。
+
+参考实现：`app/src/test/java/com/kang/bravedns/ui/activity/LocalHostsProfilesActivityRobolectricTest.kt`。
+
+## 何时必须补充 / 更新冒烟测试
+
+满足任一条件时，**同一变更**中应增加或更新 **至少能完成 `onCreate` + `onResume` 且不抛异常** 的 Robolectric 用例（或仪器化等价物），并在 PR 说明中写明（与 [android-post-edit-build-verification.mdc](android-post-edit-build-verification.mdc) 一致）：
+
+- 新建 **Activity** 或主流程 **Fragment**；
+- 布局新增 **`MaterialButton` / `SwitchMaterial` / `MaterialAlertDialogBuilder`** 等且宿主仍用瘦身 Application 主题；
+- 修改 **Koin 注入构造**、或 **主题 applyStyle** 逻辑。
+
+## Agent / 贡献者自检清单（UI 改动）
+
+- [ ] 新页面是否在 `onCreate` 中与全局主题策略一致（`applyStyle` 或 Manifest 主题已覆盖 Material）？
+- [ ] 是否需新的字符串/尺寸/drawable，且已放入正确 `values*` / `drawable*`？
+- [ ] 是否新增/更新了 Robolectric（或仪器化）冒烟，并实际跑过 **`test*UnitTest`** 中包含该用例的任务？

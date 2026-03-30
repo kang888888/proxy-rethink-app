@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+    <allow-in-power-save package="com.kang.bravedns" />
+    <install-in-user-type package="com.kang.bravedns">
+        <install-in user-type="SYSTEM" />
+    </install-in-user-type>
+</config>

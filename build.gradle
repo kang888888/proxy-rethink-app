@@ -3,10 +3,9 @@
 buildscript {
     ext.kotlin_version = '2.1.20'
     repositories {
-        google()
-        // https://jfrog.com/blog/into-the-sunset-bintray-jcenter-gocenter-and-chartcenter/
-        // jcenter() is no longer getting updates, instead using mavenCentral
-        mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.13.1'
@@ -37,8 +36,9 @@ plugins {
 
 allprojects {
     repositories {
-        google()
-        mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
 
         def firestackRepo = project.findProperty("firestackRepo") ?: "github"
 

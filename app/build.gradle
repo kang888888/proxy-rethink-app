@@ -82,10 +82,10 @@ try {
 android {
     compileSdkVersion(36)
     // https://developer.android.com/studio/build/configure-app-module
-    namespace 'com.celzero.bravedns'
+    namespace 'com.kang.bravedns'
 
     defaultConfig {
-        applicationId "com.celzero.bravedns"
+        applicationId "com.kang.bravedns"
         minSdkVersion(23)
         targetSdkVersion 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -109,15 +109,18 @@ android {
     }
 
     // https://developer.android.com/studio/build/configure-apk-splits
+    // Default: single fat APK (all ABIs) — no per-ABI outputs. Pass -PtargetAbi=arm64-v8a (etc.)
+    // when you need one split APK (CI, smaller artifact).
+    def targetAbiForSplit = project.findProperty("targetAbi")?.toString()
+    def enableAbiSplits = targetAbiForSplit != null && !targetAbiForSplit.isEmpty()
     splits.abi {
-        println('Create separate apks')
-        // generates multiple APKs based on the ABIs you define
-        enable true
+        println("ABI splits enabled: $enableAbiSplits" + (enableAbiSplits ? " ($targetAbiForSplit)" : " (universal fat APK only)"))
+        enable enableAbiSplits
         reset()
-        // comma-separated list of ABIs that you want Gradle to generate APKs for
-        include 'x86', 'armeabi', 'armeabi-v7a', 'arm64-v8a', 'x86_64'
-        // generates a universal APK in addition to per-ABI APKs
-        universalApk true
+        if (enableAbiSplits) {
+            include targetAbiForSplit
+            universalApk false
+        }
     }
     // version codes for each ABI variant
     project.ext.versionCodes = [
@@ -161,7 +164,10 @@ android {
                 debugSymbolLevel 'SYMBOL_TABLE'
                 // Only process symbols for the most common ABIs to avoid Crashlytics index errors
                 // This reduces the total symbol data Crashlytics needs to process
-                abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+                def targetAbi = project.findProperty("targetAbi")?.toString()
+                if (targetAbi == null || targetAbi.isEmpty()) {
+                    abiFilters 'arm64-v8a', 'armeabi-v7a', 'x86_64'
+                }
             }
             if (!deGoogled) {
                 firebaseCrashlytics {
@@ -250,8 +256,26 @@ android {
             vectorDrawables.useSupportLibrary = true
         }
     }
+    // Default: only website* variants (website + full + buildType). Set -PallReleaseChannels=true
+    // or allReleaseChannels=true in gradle.properties for play/fdroid (CI, store builds).
+    def allReleaseChannels = project.findProperty("allReleaseChannels")?.toString()?.toBoolean() ?: false
+    variantFilter { variant ->
+        if (allReleaseChannels) {
+            return
+        }
+        if (variant.flavors[0].name != "website") {
+            variant.ignore = true
+        }
+    }
     lint {
         abortOnError true
+    }
+
+    // Robolectric / 单元测试：合并资源，避免 R 与 manifest 包名解析异常（如 org.robolectric.default）
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
     }
 }
 

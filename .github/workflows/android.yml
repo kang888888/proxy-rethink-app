@@ -39,8 +39,9 @@ jobs:
     - name: 🚂 Assemble
       if: success()
       run: |
-        ./gradlew lint
+        ./gradlew -PallReleaseChannels=true lint
         ./gradlew \
+          -PallReleaseChannels=true \
           ${VARIANT} \
           --info \
           --warning-mode all
